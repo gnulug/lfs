@@ -18,9 +18,9 @@ do
 	COUNT=$((COUNT+1))
 	wget $package 2>/dev/null
 	if [ $? -ne 0 ]; then
-		echo "Download for $package failed!"
+		echo "$COUNT - Download for $package failed!"
 	else
-		echo "Success! for $package"
+		echo "$COUNT - Success! for $package"
 		SUCCESS=$((SUCCESS+1))
 	fi
 done
