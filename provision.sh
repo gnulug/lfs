@@ -2,11 +2,17 @@
 # Run once on first boot
 COUNT=0
 SUCCESS=0
+HOME=/home/vagrant
+export LFS=/mnt/lfs
 
 touch /tmp/ran.provision.$(date +"%d-%m-%Y").shell
 
+# For variable re-use
+echo "export LFS=/mnt/lfs" > /etc/profile.d/lfs.sh
+chmod 660 /etc/profile.d/lfs.sh
+
 apt-get update
-sudo apt-get install -y build-essential bison gawk vim util-linux
+sudo apt-get install -y build-essential bison gawk vim util-linux expect
 
 # Download packages
 
@@ -26,23 +32,77 @@ do
 done
 
 echo "**** Downloaded $SUCCESS packages of $COUNT ****"
-xz -d *.xz
-tar -zxf *.{tar.gz,tgz}
-tar -jxf *.{tar.bz2,tbz2,tbz}
-tar -xvfJ *.tar.xz
+sudo xz -d *.xz
+sudo gzip -d *.gz
+sudo bzip2 -d *.bz*
+
+for tarball in *.tar
+do
+	sudo tar xf $tarball
+done
 
 cd ~/
 
-if [ -d /mnt/lfs/ ]; then
-	sudo mv sources /mnt/lfs/
+/usr/bin/expect <<EOF
+spawn sudo fdisk /dev/sdb
+expect "Command \(m for help\):"
+send "n\n"
+expect "Select \(default p\):"
+send "p\n"
+expect "Partition number"
+send "1\n"
+expect "First sector"
+send "\n"
+expect "Last sector"
+send "+9G\n"
+
+expect "Command \(m for help\):"
+send "n\n"
+expect "Select \(default p\):"
+send "p\n"
+expect "Partition number"
+send "2\n"
+expect "First sector"
+send "\n"
+expect "Last sector"
+send "\n"
+
+expect "Command \(m for help\):"
+send "t\n"
+expect "Partition number"
+send "2\n"
+expect "Hex code"
+send "82\n"
+
+expect "Command \(m for help\):"
+send "t\n"
+expect "Partition number"
+send "1\n"
+expect "Hex code"
+send "83\n"
+
+expect "Command \(m for help\):"
+send "w\n"
+expect "Syncing disks"
+EOF
+
+sudo mkfs -t ext4 /dev/sdb1
+sudo mkswap /dev/sdb2
+sudo chmod 0660 /dev/sdb2
+sudo swapon -v /dev/sdb2
+sudo mkdir -pv $LFS
+sudo mount -v -t ext4 /dev/sdb1 $LFS
+
+for dir in home usr var
+do
+	sudo mkdir $LFS/$dir
+done
+
+if [ -d $LFS ]
+then
+	sudo mv $HOME/sources $LFS
 fi
 
-# Pg 16
-#http://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.xz
-#http://ftp.gnu.org/gnu/automake/automake-1.14.1.tar.xz
-#http://ftp.gnu.org/gnu/bash/bash-4.2.tar.gz
-#http://alpha.gnu.org/gnu/bc/bc-1.06.95.tar.bz2
-#http://ftp.gnu.org/gnu/binutils/binutils-2.24.tar.bz2
 #http://ftp.gnu.org/gnu/bison/bison-3.0.2.tar.xz
 #http://www.bzip.org/1.0.6/bzip2-1.0.6.tar.gz
 #http://sourceforge.net/projects/check/files/check/0.9.12/check-0.9.12.tar.gz
