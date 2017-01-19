@@ -12,7 +12,8 @@ echo "export LFS=/mnt/lfs" > /etc/profile.d/lfs.sh
 chmod 660 /etc/profile.d/lfs.sh
 
 apt-get update
-sudo apt-get install -y build-essential bison gawk vim util-linux expect
+sudo apt-get upgrade -y --force-yes
+sudo apt-get install -y build-essential bison gawk vim util-linux expect -y --force-yes
 
 # Download packages
 
